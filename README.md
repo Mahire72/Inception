@@ -24,7 +24,7 @@ The entire infrastructure is managed using Docker Compose, with a Makefile to si
 ### Prerequisites
 Before running the project, make sure you have installed:
 `Docker`: Used to build and run containers.
-`Docker Compose`: Used to manage the multi-container infrastructure.
+`Docker Compose`: Used to manage the multi-container infrastructure
 `Make`: Used to execute the commands defined in the Makefile.
 
 The project was developed on Debian 13 (Trixie) using VirtualBox.
