@@ -22,6 +22,11 @@ if [ ! -f wp-config.php ]; then
     sed -i "s/username_here/${MYSQL_USER}/" wp-config.php
     sed -i "s/password_here/${MYSQL_PASSWORD}/" wp-config.php
     sed -i "s/localhost/mariadb/" wp-config.php
+
+    if [ -n "${WORDPRESS_URL:-}" ]; then
+        sed -i "/\/\* That's all, stop editing!/i define('WP_HOME', '${WORDPRESS_URL}');
+                        \ndefine('WP_SITEURL', '${WORDPRESS_URL}');" wp-config.php
+    fi
 fi
 
 # Start PHP-FPM in the foreground
