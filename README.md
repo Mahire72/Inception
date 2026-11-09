@@ -70,10 +70,10 @@ Configure your domain name so that it points to your local machine.
 Add an entry to the host machine's `/etc/hosts` file:
 
 ```text
-127.0.0.1 mamaimai.42.fr
+127.0.0.1 login.42.fr
 ```
 
-Replace `mamaimai` with your own login.
+Replace `login` with your own login.
 
 The IP address should correspond to your machine's network configuration. For example, in the VirtualBox VM used during development, the address is `10.0.2.15`.
 
@@ -87,7 +87,7 @@ make
 
 This command:
 
-- Creates the required data directories under `/home/mamaimai/data/`.
+- Creates the required data directories under `/home/login/data/`.
 - Builds the Docker images.
 - Creates and starts the containers using Docker Compose.
 
@@ -119,10 +119,8 @@ The infrastructure consists of three services:
 Once all containers are running, open your browser and visit:
 
 ```text
-https://mamaimai.42.fr
+https://login.42.fr
 ```
-
-Replace `mamaimai` with your own login.
 
 The project uses a self-signed TLS certificate. Therefore, your browser may display a security warning when accessing the website. This is expected in the development environment.
 
