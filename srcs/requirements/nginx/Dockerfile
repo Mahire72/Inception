@@ -1,5 +1,7 @@
 # Use the penultimate stable Debian release
-FROM debian:bookworm
+# chois image de base.
+FROM debian:bookworm 
+# utilise debian 12(bookworm)
 
 # Install NGINX and OpenSSL for HTTPS
 RUN apt-get update -y && \
