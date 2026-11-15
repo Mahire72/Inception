@@ -1,5 +1,4 @@
-# Use the penultimate stable Debian release
-# chois image de base.
+# Use Debian 12 (Bookworm) as the base image
 FROM debian:bookworm 
 # utilise debian 12(bookworm)
 

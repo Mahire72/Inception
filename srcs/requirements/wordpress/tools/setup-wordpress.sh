@@ -5,8 +5,28 @@ set -e
 : "${MYSQL_USER:?MYSQL_USER is required}"
 : "${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}"
 : "${WORDPRESS_URL:?WORDPRESS_URL is required}"
+: "${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
 
 cd /var/www/html
+
+# Wait for MariaDB to become ready
+echo "Waiting for MariaDB..."
+
+until php -r '
+$db = @new mysqli(
+    "mariadb",
+    getenv("MYSQL_USER"),
+    getenv("MYSQL_PASSWORD"),
+    getenv("MYSQL_DATABASE"),
+    3306
+);
+exit($db->connect_error ? 1 : 0);
+' 2>/dev/null; do
+    echo "MariaDB is not ready yet. Retrying in 2 seconds..."
+    sleep 2
+done
+
+echo "MariaDB is ready!"
 
 # Download WordPress if it is not installed
 if [ ! -f wp-load.php ]; then
@@ -34,43 +54,72 @@ case "$WORDPRESS_URL" in
         ;;
 esac
 
-# Update or insert WordPress URL constants
-php -r '
+# Configure WordPress and Redis before WordPress initialization
+php <<'PHP'
+<?php
 $file = "/var/www/html/wp-config.php";
 $url = getenv("WORDPRESS_URL");
+$password = getenv("REDIS_PASSWORD");
 
 $content = file_get_contents($file);
 
-foreach (["WP_HOME", "WP_SITEURL"] as $constant) {
-    $definition = "define('\''" . $constant . "'\'', '\''" . $url . "'\'');";
-
-    $pattern = "/define\s*\(\s*['\''\"]" . $constant . "['\''\"]\s*,\s*[^;]*\);/";
-
-    if (preg_match($pattern, $content)) {
-        $content = preg_replace($pattern, $definition, $content);
-    } else {
-        $marker = "/* Thats all, stop editing!";
-
-        $position = strpos($content, "/* Thats all, stop editing!");
-        if ($position === false) {
-            $position = strpos($content, "/* That'\''s all, stop editing!");
-        }
-
-        if ($position === false) {
-            fwrite(STDERR, "Cannot find wp-config.php insertion point\n");
-            exit(1);
-        }
-
-        $content = substr_replace(
-            $content,
-            $definition . "\n",
-            $position,
-            0
-        );
-    }
+if ($content === false) {
+    fwrite(STDERR, "ERROR: Cannot read wp-config.php\n");
+    exit(1);
 }
 
-file_put_contents($file, $content);
-'
+$config = [
+    "WP_HOME" => $url,
+    "WP_SITEURL" => $url,
+    "FS_METHOD" => "direct",
+    "WP_REDIS_HOST" => "redis",
+    "WP_REDIS_PORT" => 6379,
+    "WP_REDIS_DATABASE" => 0,
+    "WP_REDIS_PASSWORD" => $password
+];
 
+// Remove existing definitions so none remain after wp-settings.php
+foreach (array_keys($config) as $name) {
+    $pattern = '/^[ \t]*define\s*\(\s*[\'"]'
+        . preg_quote($name, '/')
+        . '[\'"]\s*,[^;]*\);\s*\r?\n/m';
+
+    $content = preg_replace($pattern, '', $content);
+}
+
+// Build all definitions
+$definitions = "";
+
+foreach ($config as $name => $value) {
+    $definitions .= "define("
+        . var_export($name, true)
+        . ", "
+        . var_export($value, true)
+        . ");\n";
+}
+
+// Find the WordPress initialization line
+$marker = "require_once ABSPATH . 'wp-settings.php';";
+$position = strpos($content, $marker);
+
+if ($position === false) {
+    fwrite(STDERR, "ERROR: Cannot find wp-settings.php initialization line\n");
+    exit(1);
+}
+
+// Insert all definitions immediately before WordPress initialization
+$content = substr_replace(
+    $content,
+    $definitions . "\n",
+    $position,
+    0
+);
+
+if (file_put_contents($file, $content) === false) {
+    fwrite(STDERR, "ERROR: Cannot write wp-config.php\n");
+    exit(1);
+}
+PHP
+
+# Start PHP-FPM in the foreground
 exec php-fpm8.2 -F

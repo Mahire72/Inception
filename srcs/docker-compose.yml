@@ -6,10 +6,12 @@ services:
     restart: always
     depends_on:
       - wordpress
+      - adminer
     ports:
       - "443:443"
     volumes:
       - wordpress_data:/var/www/html:ro
+      - adminer_files:/var/www/adminer:ro
     networks:
       - inception
 
@@ -22,8 +24,39 @@ services:
       - .env
     depends_on:
       - mariadb
+      - redis
     volumes:
       - wordpress_data:/var/www/html
+    networks:
+      - inception
+
+  static-website:
+    build: ./requirements/bonus/static-website
+    image: static-website
+    container_name: static-website
+    restart: always
+    networks:
+      - inception
+
+  adminer:
+    build: ./requirements/bonus/adminer
+    image: adminer
+    container_name: adminer
+    restart: always
+    depends_on:
+      - mariadb
+    volumes:
+      - adminer_files:/var/www/adminer
+    networks:
+      - inception
+    
+  redis:
+    build: ./requirements/bonus/redis
+    image: redis
+    container_name: redis
+    restart: always
+    env_file:
+      - .env
     networks:
       - inception
 
@@ -53,6 +86,9 @@ volumes:
       type: none
       o: bind
       device: /home/mamaimai/data/mariadb
+  
+  adminer_files:
+    driver: local
 
 networks:
   inception:
