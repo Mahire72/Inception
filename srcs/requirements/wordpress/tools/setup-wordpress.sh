@@ -4,17 +4,18 @@ set -e
 : "${MYSQL_DATABASE:?MYSQL_DATABASE is required}"
 : "${MYSQL_USER:?MYSQL_USER is required}"
 : "${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}"
+: "${WORDPRESS_URL:?WORDPRESS_URL is required}"
 
 cd /var/www/html
 
-# Download WordPress only if it isn't already installed
+# Download WordPress if it is not installed
 if [ ! -f wp-load.php ]; then
     curl -fsSL https://wordpress.org/latest.tar.gz -o /tmp/wordpress.tar.gz
     tar -xzf /tmp/wordpress.tar.gz --strip-components=1
-    rm /tmp/wordpress.tar.gz
+    rm -f /tmp/wordpress.tar.gz
 fi
 
-# Create the WordPress configuration if it doesn't exist
+# Create wp-config.php if it does not exist
 if [ ! -f wp-config.php ]; then
     cp wp-config-sample.php wp-config.php
 
@@ -24,20 +25,52 @@ if [ ! -f wp-config.php ]; then
     sed -i "s/localhost/mariadb/" wp-config.php
 fi
 
-# Configure the WordPress website URL
-if [ -n "${WORDPRESS_URL:-}" ]; then
-    if ! grep -q "WP_HOME" wp-config.php; then
-        sed -i "/\/\* That's all, stop editing!/i define('WP_HOME', '${WORDPRESS_URL}');" wp-config.php
-    else
-        sed -i "s|define('WP_HOME'.*|define('WP_HOME', '${WORDPRESS_URL}');|" wp-config.php
-    fi
+# Validate the public website URL
+case "$WORDPRESS_URL" in
+    https://*) ;;
+    *)
+        echo "ERROR: WORDPRESS_URL must start with https://"
+        exit 1
+        ;;
+esac
 
-    if ! grep -q "WP_SITEURL" wp-config.php; then
-        sed -i "/\/\* That's all, stop editing!/i define('WP_SITEURL', '${WORDPRESS_URL}');" wp-config.php
-    else
-        sed -i "s|define('WP_SITEURL'.*|define('WP_SITEURL', '${WORDPRESS_URL}');|" wp-config.php
-    fi
-fi
+# Update or insert WordPress URL constants
+php -r '
+$file = "/var/www/html/wp-config.php";
+$url = getenv("WORDPRESS_URL");
 
-# Start PHP-FPM in the foreground
+$content = file_get_contents($file);
+
+foreach (["WP_HOME", "WP_SITEURL"] as $constant) {
+    $definition = "define('\''" . $constant . "'\'', '\''" . $url . "'\'');";
+
+    $pattern = "/define\s*\(\s*['\''\"]" . $constant . "['\''\"]\s*,\s*[^;]*\);/";
+
+    if (preg_match($pattern, $content)) {
+        $content = preg_replace($pattern, $definition, $content);
+    } else {
+        $marker = "/* Thats all, stop editing!";
+
+        $position = strpos($content, "/* Thats all, stop editing!");
+        if ($position === false) {
+            $position = strpos($content, "/* That'\''s all, stop editing!");
+        }
+
+        if ($position === false) {
+            fwrite(STDERR, "Cannot find wp-config.php insertion point\n");
+            exit(1);
+        }
+
+        $content = substr_replace(
+            $content,
+            $definition . "\n",
+            $position,
+            0
+        );
+    }
+}
+
+file_put_contents($file, $content);
+'
+
 exec php-fpm8.2 -F

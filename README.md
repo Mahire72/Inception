@@ -6,9 +6,9 @@
 
 The Inception project is a system administration project that aims to introduce the use of Docker and Docker Compose to create and manage a small infrastructure made up of multiple services.
 
-The goal of this project is to build a secure and functional WordPress website using separate Docker containers for each service. The infrastructure consists of three main services:
+The project consists of three separate Docker containers:
 
-- **NGINX:** Acts as the web server and provides secure access to the website through HTTPS using TLS.
+- **NGINX:** Provide secure HTTPS access to the website using TLS.
 - **WordPress:** Runs the WordPress website using PHP-FPM.
 - **MariaDB:** Stores the WordPress database and its information.
 
@@ -95,20 +95,18 @@ sudo nano /etc/hosts
 Add the following entry:
 
 ```text
-10.0.2.15 mamaimai.42.fr
+10.0.2.15 login.42.fr
 ```
 
-Replace `mamaimai` with your own 42 login and make sure the IP address corresponds to your virtual machine's network configuration.
+Replace `login` with your own 42 login and make sure the IP address corresponds to your virtual machine's network configuration.
 
 In this project, `10.0.2.15` is the IP address used by the Debian virtual machine in the VirtualBox development environment.
 
-This configuration allows your virtual machine to resolve `mamaimai.42.fr` to its own IP address, making the WordPress website accessible through:
+This configuration allows your virtual machine to resolve `login.42.fr` to its own IP address, making the WordPress website accessible through:
 
 ```text
-https://mamaimai.42.fr
+https://login.42.fr
 ```
-
-Since NGINX uses HTTPS with a self-signed TLS certificate, your browser may display a security warning when accessing the website. This is expected in the development environment.
 
 ### 5. Compilation and Execution
 
@@ -120,7 +118,7 @@ make
 
 This command:
 
-- Creates the required data directories under `/home/mamaimai/data/`.
+- Creates the required data directories under `/home/login/data/`.
 - Builds the Docker images.
 - Creates and starts the containers using Docker Compose.
 
@@ -154,10 +152,11 @@ The Makefile provides several commands to simplify project management:
 Once all containers are running, open your browser and visit:
 
 ```text
-https://mamaimai.42.fr
+https://login.42.fr
 ```
 
-The project uses a self-signed TLS certificate. Therefore, your browser may display a security warning when accessing the website. This is expected in the development environment.
+Since NGINX uses HTTPS with a self-signed TLS certificate, your browser may display a security warning when accessing the website. This is expected in the development environment.
+
 
 ### 8. Checking the Infrastructure
 
