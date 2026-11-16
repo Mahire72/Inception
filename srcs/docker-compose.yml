@@ -72,6 +72,38 @@ services:
     networks:
       - inception
 
+  postgresql:
+    build: ./requirements/bonus/postgresql
+    image: postgresql
+    container_name: postgresql
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgresql_data:/var/lib/postgresql
+    networks:
+      - inception
+
+  ftp:
+    build: ./requirements/bonus/ftp
+    container_name: ftp
+    restart: always
+    env_file:
+      - .env
+    environment:
+      FTP_USER: ${FTP_USER}
+      FTP_PASSWORD: ${FTP_PASSWORD}
+    volumes:
+      - wordpress_data:/var/www/html
+    ports:
+      - "21:21"
+      - "21100-21110:21100-21110"
+    networks:
+      - inception
+    depends_on:
+      - wordpress
+    
+
 volumes:
   wordpress_data:
     driver: local
@@ -88,6 +120,9 @@ volumes:
       device: /home/mamaimai/data/mariadb
   
   adminer_files:
+    driver: local
+
+  postgresql_data:
     driver: local
 
 networks:

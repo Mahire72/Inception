@@ -5,7 +5,7 @@ COMPOSE = docker compose -f srcs/docker-compose.yml
 DATA_DIR = /home/mamaimai/data
 
 all:
-	sudo mkdir -p $(DATA_DIR)/mariadb $(DATA_DIR)/wordpress
+	sudo mkdir -p $(DATA_DIR)/mariadb $(DATA_DIR)/wordpress $(DATA_DIR)/postgresql
 	$(COMPOSE) up -d --build
 
 build:
